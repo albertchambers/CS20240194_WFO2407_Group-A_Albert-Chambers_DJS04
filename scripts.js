@@ -1,39 +1,12 @@
 // @ts-check
 
 import { books, authors, genres, BOOKS_PER_PAGE } from './data.js';
+import { BookPreview } from './components/book-preview.js';
 
-/** @class */
-class Book {
-    constructor({ id, author, image, title, published, description }) {
-        this.id = id;
-        this.author = author;
-        this.image = image;
-        this.title = title;
-        this.published = published;
-        this.description = description;
-    }
+let page = 1; // Current page number
+let matches = books; // Holds the current list of matched books
 
-    /** Creates a preview element for the book.
-     * @returns {HTMLElement}
-     */
-    createPreviewElement() {
-        const element = document.createElement('button');
-        element.classList.add('preview');
-        element.setAttribute('data-preview', this.id);
-        element.innerHTML = `
-            <img class="preview__image" src="${this.image}" alt="${this.title} cover image" />
-            <div class="preview__info">
-                <h3 class="preview__title">${this.title}</h3>
-                <div class="preview__author">${authors[this.author] || 'Unknown Author'}</div>
-            </div>
-        `;
-        return element;
-    }
-}
-
-let page = 1;
-let matches = books;
-
+// DOM elements to interact with
 const elements = {
     listItems: document.querySelector('[data-list-items]'),
     listButton: document.querySelector('[data-list-button]'),
@@ -55,18 +28,28 @@ const elements = {
     listDescription: document.querySelector('[data-list-description]'),
 };
 
-/** Renders the initial books on the page. */
+/** Renders the initial set of books on page load. */
 const renderInitialBooks = () => {
     try {
-        const starting = document.createDocumentFragment();
-        for (const bookData of matches.slice(0, BOOKS_PER_PAGE)) {
-            const book = new Book(bookData);
-            starting.appendChild(book.createPreviewElement());
-        }
-        elements?.listItems?.appendChild(starting);
-        updateListButton();
+        const initialBooks = matches.slice(0, BOOKS_PER_PAGE);
+        const fragment = document.createDocumentFragment();
+
+        initialBooks.forEach(bookData => {
+            const previewElement = document.createElement('book-preview');
+            previewElement.setAttribute('id', bookData.id);
+            previewElement.setAttribute('title', bookData.title);
+            previewElement.setAttribute('author', authors[bookData.author] || 'Unknown Author');
+            previewElement.setAttribute('image', bookData.image);
+            previewElement.addEventListener('click', showBookDetails); // Ensure this function is defined
+
+            fragment.appendChild(previewElement);
+        });
+
+        elements.listItems.appendChild(fragment);
+        page = 1; // Start page counter after initial render
+        updateListButton(); // Ensure this function updates the button state correctly
     } catch (error) {
-        console.error("Error rendering initial books:", error);
+        console.error('Error rendering books:', error); // Improved error handling
     }
 };
 
@@ -82,7 +65,8 @@ const setupAuthors = () => {
     document.querySelector('[data-search-authors]')?.appendChild(authorsHtml);
 };
 
-/** Creates select options for dropdowns.
+/**
+ * Creates select options for dropdowns.
  * @param {Object} data - The data to create options from.
  * @param {string} defaultValue - The default value for the select.
  * @param {string} defaultText - The default text for the select.
@@ -107,32 +91,25 @@ const createSelectOptions = (data, defaultValue, defaultText) => {
 /** Sets the initial theme based on user preference. */
 const setInitialTheme = () => {
     try {
-        // Check for the user's preferred color scheme
         const theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
 
-        // Safely update the button text if listButton exists
         if (elements.listButton instanceof HTMLElement) {
             elements.listButton.innerText = `Show more (${books.length - BOOKS_PER_PAGE})`;
-        } else {
-            console.warn("listButton element is not defined or not an HTMLElement.");
         }
 
-        // Update the theme using the previously defined function
         updateTheme(theme);
 
-        // Safely set the value of the theme setting element if it exists
         const themeSettingElement = document.querySelector('[data-settings-theme]');
         if (themeSettingElement instanceof HTMLInputElement) {
-            themeSettingElement.value = theme; // Set the value if the element is an input
-        } else {
-            console.warn("Theme setting element is not found or not an HTMLInputElement.");
+            themeSettingElement.value = theme;
         }
     } catch (error) {
         console.error("Error setting initial theme:", error);
     }
 };
 
-/** Updates the theme of the page.
+/**
+ * Updates the theme of the page.
  * @param {string} theme - The current theme ('day' or 'night').
  */
 const updateTheme = (theme) => {
@@ -157,7 +134,8 @@ const setupEventListeners = () => {
     elements.listItems.addEventListener('click', showBookDetails);
 };
 
-/** Opens a specified overlay and focuses on a given element.
+/**
+ * Opens a specified overlay and focuses on a given element.
  * @param {HTMLElement} overlay - The overlay element to open.
  * @param {HTMLElement} focusElement - The element to focus on.
  */
@@ -173,7 +151,8 @@ const closeOverlay = (overlay) => {
     overlay.open = false;
 };
 
-/** Handles the submission of the settings form.
+/**
+ * Handles the submission of the settings form.
  * @param {Event} event - The form submission event.
  */
 const handleSettingsSubmit = (event) => {
@@ -184,7 +163,8 @@ const handleSettingsSubmit = (event) => {
     closeOverlay(elements.settingsOverlay);
 };
 
-/** Handles the submission of the search form.
+/**
+ * Handles the submission of the search form.
  * @param {Event} event - The form submission event.
  */
 const handleSearchSubmit = (event) => {
@@ -195,7 +175,8 @@ const handleSearchSubmit = (event) => {
     renderFilteredBooks();
 };
 
-/** Filters books based on search criteria.
+/**
+ * Filters books based on search criteria.
  * @param {Object} filters - The filters to apply.
  * @returns {Array}
  */
@@ -222,8 +203,13 @@ const renderFilteredBooks = () => {
         elements.listItems.innerHTML = '';
         const newItems = document.createDocumentFragment();
         for (const bookData of matches.slice(0, BOOKS_PER_PAGE)) {
-            const book = new Book(bookData);
-            newItems.appendChild(book.createPreviewElement());
+            const previewElement = new BookPreview();
+            previewElement.setAttribute('id', bookData.id);
+            previewElement.setAttribute('title', bookData.title);
+            previewElement.setAttribute('author', authors[bookData.author] || 'Unknown Author');
+            previewElement.setAttribute('image', bookData.image);
+
+            newItems.appendChild(previewElement);
         }
         elements.listItems.appendChild(newItems);
         updateListButton();
@@ -242,51 +228,58 @@ const loadMoreBooks = () => {
         const end = (page + 1) * BOOKS_PER_PAGE;
 
         for (const bookData of matches.slice(start, end)) {
-            const book = new Book(bookData);
-            fragment.appendChild(book.createPreviewElement());
+            const previewElement = new BookPreview();
+            previewElement.setAttribute('id', bookData.id);
+            previewElement.setAttribute('title', bookData.title);
+            previewElement.setAttribute('author', authors[bookData.author] || 'Unknown Author');
+            previewElement.setAttribute('image', bookData.image);
+
+            fragment.appendChild(previewElement);
         }
 
-        elements.listItems.appendChild(fragment);
-        page += 1;
-        updateListButton();
+        if (fragment.childNodes.length > 0) {
+            elements.listItems.appendChild(fragment);
+            page++;
+            updateListButton();
+        } else {
+            alert('No more books to load.');
+        }
     } catch (error) {
         console.error("Error loading more books:", error);
     }
 };
 
-/** Updates the button's text to reflect the number of remaining books. */
+/** Updates the visibility and text of the load more button. */
 const updateListButton = () => {
-    const remaining = matches.length - (page * BOOKS_PER_PAGE);
-    elements.listButton.innerText = `Show more (${remaining < 0 ? 0 : remaining})`;
+    if (matches.length > (page * BOOKS_PER_PAGE)) {
+        elements.listButton.classList.remove('hidden');
+        elements.listButton.innerText = `Show more (${matches.length - (page * BOOKS_PER_PAGE)})`;
+    } else {
+        elements.listButton.classList.add('hidden');
+    }
 };
 
-/** Displays book details in a modal. */
+/** Shows details of a selected book. */
 const showBookDetails = (event) => {
-    const target = event.target.closest('[data-preview]');
-    if (!target) return;
+    const bookId = event.target.id; // Assuming that the book preview is clicked
+    console.log('Clicked Book ID:', bookId); // Debugging output
 
-    const bookId = target.dataset.preview;
-    const bookData = books.find(book => book.id === bookId);
+    const bookData = books.find(book => book.id === bookId); // Compare as strings or convert if necessary
 
     if (bookData) {
         elements.listImage.src = bookData.image;
         elements.listTitle.innerText = bookData.title;
         elements.listSubtitle.innerText = authors[bookData.author] || 'Unknown Author';
         elements.listDescription.innerText = bookData.description;
-        document.querySelector('[data-list-active]').showModal();
+        document.querySelector('[data-list-active]').open = true; // Opens the details overlay
     } else {
-        console.warn("Book not found for ID:", bookId);
+        console.error(`Book not found: ID ${bookId} does not match any books in the collection.`);
     }
 };
 
-// Initialize the app
-const init = () => {
-    setupGenres();
-    setupAuthors();
-    setInitialTheme();
-    renderInitialBooks();
-    setupEventListeners();
-};
-
-// Run the initialization
-init();
+// Initial function calls
+renderInitialBooks();
+setupGenres();
+setupAuthors();
+setInitialTheme();
+setupEventListeners();
